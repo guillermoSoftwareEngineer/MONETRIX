@@ -48,7 +48,7 @@ MONETRIX/
 
 1. **Clonar el repositorio**:
    ```bash
-   git clone <tu-repo-url>
+   git clone <https://github.com/guillermoSoftwareEngineer/MONETRIX.git>
    cd MONETRIX
    ```
 
