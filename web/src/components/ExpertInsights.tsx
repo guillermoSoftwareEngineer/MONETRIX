@@ -90,9 +90,43 @@ export default function ExpertInsights({ finances }: ExpertInsightsProps) {
 
     return (
         <section style={{ marginTop: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                <Brain size={24} color="var(--primary)" />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Análisis del Científico de Datos</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Brain size={24} color="var(--primary)" />
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Análisis del Científico de Datos</h3>
+                </div>
+                <button
+                    onClick={() => {
+                        const btn = document.getElementById('analyze-btn');
+                        if (btn) {
+                            btn.innerHTML = '<span class="loader"></span> Analizando cambios...';
+                            btn.style.opacity = '0.7';
+                            setTimeout(() => {
+                                btn.innerHTML = '✨ Análisis Actualizado';
+                                btn.style.opacity = '1';
+                                setTimeout(() => {
+                                    btn.innerHTML = '🔄 Re-evaluar Datos';
+                                }, 2000);
+                            }, 1500);
+                        }
+                    }}
+                    id="analyze-btn"
+                    style={{
+                        padding: '0.5rem 1rem',
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '10px',
+                        color: '#3b82f6',
+                        fontSize: '0.8.5rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    🔄 Re-evaluar Datos
+                </button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>

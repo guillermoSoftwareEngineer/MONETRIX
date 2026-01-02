@@ -84,6 +84,7 @@ export default function BudgetAnalytics() {
                                 <YAxis stroke="#a1a1aa" fontSize={12} tickFormatter={(val) => `$${val / 1000}k`} />
                                 <Tooltip
                                     contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: '12px' }}
+                                    formatter={(value: any) => [`$${Number(value).toLocaleString()}`]}
                                     itemStyle={{ color: '#fff' }}
                                 />
                                 <Legend />
@@ -119,10 +120,17 @@ export default function BudgetAnalytics() {
                                 <XAxis dataKey="name" stroke="#a1a1aa" fontSize={12} />
                                 <YAxis stroke="#a1a1aa" fontSize={12} />
                                 <Tooltip
-                                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: '12px' }}
-                                    itemStyle={{ color: '#fff' }}
+                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                    formatter={(value: any, name: any) => [`$${Number(value).toLocaleString()}`, name === 'Gasto Total' ? 'Gasto Total del Mes' : name]}
+                                    labelStyle={{ color: '#e4e4e7', marginBottom: '0.5rem', fontWeight: 'bold' }}
                                 />
-                                <Bar dataKey={(data) => Object.keys(data).reduce((acc, k) => k === 'name' ? acc : acc + data[k], 0)} radius={[8, 8, 0, 0]} fill="#3b82f6" name="Gasto Total" />
+                                <Bar
+                                    dataKey={(data) => Object.keys(data).reduce((acc, k) => (k === 'name' || k === '_sortKey') ? acc : acc + data[k], 0)}
+                                    radius={[8, 8, 0, 0]}
+                                    fill="#3b82f6"
+                                    name="Gasto Mensual Total"
+                                />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>

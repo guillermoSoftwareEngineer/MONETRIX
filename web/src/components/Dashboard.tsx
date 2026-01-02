@@ -16,8 +16,10 @@ import BudgetAnalytics from "./BudgetAnalytics";
 import AIChatAdvisor from "./AIChatAdvisor";
 import BudgetComparisonChart from "./BudgetComparisonChart";
 import FinancialGoalsChart from "./FinancialGoalsChart";
+import FinancialProjections from "./FinancialProjections";
 import { ChevronDown, History, X, PartyPopper, AlertTriangle, FileText, Download } from "lucide-react";
 import { useState } from "react";
+import confetti from 'canvas-confetti';
 
 export default function Dashboard({ triggerRefresh }: { triggerRefresh: boolean }) {
     const { finances, loading, error, refresh, removeFinance } = useFinances();
@@ -25,10 +27,16 @@ export default function Dashboard({ triggerRefresh }: { triggerRefresh: boolean 
     const [showHistory, setShowHistory] = useState(false);
     const [levelUpData, setLevelUpData] = useState<{ show: boolean, level: number }>({ show: false, level: 1 });
     const [budgetAlert, setBudgetAlert] = useState<{ show: boolean, category: string }>({ show: false, category: "" });
+    const [deleteModal, setDeleteModal] = useState<{ show: boolean, id: string | null }>({ show: false, id: null });
 
-    const deleteFinance = async (id: string) => {
-        if (confirm('¿Estás seguro de eliminar este registro?')) {
-            await removeFinance(id);
+    const deleteFinance = (id: string) => {
+        setDeleteModal({ show: true, id });
+    };
+
+    const confirmDelete = async () => {
+        if (deleteModal.id) {
+            await removeFinance(deleteModal.id);
+            setDeleteModal({ show: false, id: null });
         }
     };
 
@@ -61,6 +69,27 @@ export default function Dashboard({ triggerRefresh }: { triggerRefresh: boolean 
         refreshProfile();
         if (leveledUp) {
             setLevelUpData({ show: true, level: (user?.level || 0) + 1 });
+
+            // Fire confetti 5 times
+            const duration = 5 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+            const interval: any = setInterval(function () {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                const particleCount = 50 * (timeLeft / duration);
+
+                // since particles fall down, start a bit higher than random
+                confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+                confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+            }, 250);
         }
         if (budgetExceeded) {
             setBudgetAlert({ show: true, category: "Categoría" });
@@ -241,6 +270,96 @@ export default function Dashboard({ triggerRefresh }: { triggerRefresh: boolean 
                 )}
             </AnimatePresence>
 
+            {/* Modal de Confirmación de Eliminación */}
+            <AnimatePresence>
+                {deleteModal.show && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0,0,0,0.7)',
+                            backdropFilter: 'blur(5px)',
+                            zIndex: 2000,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            style={{
+                                background: '#18181b',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '20px',
+                                padding: '2rem',
+                                maxWidth: '400px',
+                                width: '90%',
+                                textAlign: 'center',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                            }}
+                        >
+                            <div style={{
+                                width: '60px',
+                                height: '60px',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 1.5rem'
+                            }}>
+                                <AlertTriangle size={32} color="#ef4444" />
+                            </div>
+
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>¿Eliminar registro?</h3>
+                            <p style={{ color: '#a1a1aa', marginBottom: '2rem', lineHeight: 1.6 }}>
+                                Esta acción no se puede deshacer. El registro se borrará permanentemente de tu historial.
+                            </p>
+
+                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                                <button
+                                    onClick={() => setDeleteModal({ show: false, id: null })}
+                                    style={{
+                                        padding: '0.75rem 1.5rem',
+                                        background: 'transparent',
+                                        border: '1px solid #3f3f46',
+                                        borderRadius: '12px',
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => confirmDelete()}
+                                    style={{
+                                        padding: '0.75rem 1.5rem',
+                                        background: '#ef4444',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+                                    }}
+                                >
+                                    Sí, eliminar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Lista Desplegable de Movimientos */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <button
@@ -357,6 +476,9 @@ export default function Dashboard({ triggerRefresh }: { triggerRefresh: boolean 
 
             {/* Metas Financieras (Ahorro y Fondo de Emergencia) */}
             <FinancialGoalsChart />
+
+            {/* Proyecciones Inteligentes */}
+            <FinancialProjections />
 
             {/* Análisis del Científico de Datos */}
             <ExpertInsights finances={finances} />

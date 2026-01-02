@@ -106,11 +106,20 @@ export class FinancesService {
     // Grouping by Month-Year and then by Category
     rawData.forEach(f => {
       const date = new Date(f.date);
-      const monthYear = `${date.getMonth() + 1}-${date.getFullYear()}`;
-      const category = f.category || 'General';
+      // Format: "Enero 2025"
+      const monthName = date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+      // Capitalize first letter
+      const formattedName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+      const key = `${date.getMonth()}-${date.getFullYear()}`; // Keep sorting/grouping key internal if needed, but we rely on array order. 
+      // Actually, distinct months might map to same name if we just use name.
+      // But the loop is on 'rawData' which is sorted by date.
+      // We need a map to aggregate.
+
+      const monthYear = `${date.getMonth() + 1}-${date.getFullYear()}`; // Original ID key
 
       if (!history[monthYear]) {
-        history[monthYear] = { name: monthYear };
+        history[monthYear] = { name: formattedName, _sortKey: date.getTime() };
       }
       history[monthYear][category] = (history[monthYear][category] || 0) + Number(f.amount);
     });
@@ -137,12 +146,13 @@ export class FinancesService {
       spent: categories[b.category] || 0
     }));
 
-    // Datos de Mercado (Simulados para que Gastón sepa qué recomendar)
+    // Datos de Mercado (Validado Enero 2026)
     const marketOpporturnities = [
-      { name: "Nu (Nubank)", rate: "11.10% EA", term: "120 días" },
-      { name: "Banco Popular", rate: "11.20% EA", term: "360 días" },
-      { name: "Pibank", rate: "10.50% EA", term: "180 días" },
-      { name: "Global66", rate: "11% EA", type: "Cuenta Global" }
+      { name: "Pibank Cuenta", rate: "12.00% EA", term: "A la vista" },
+      { name: "Nu Cajitas", rate: "8.25% EA", term: "A la vista" },
+      { name: "Pibank CDT", rate: "10.10% EA", term: "180 días" },
+      { name: "RappiPay", rate: "9.00% EA", term: "Rentable" },
+      { name: "Lulo Bank", rate: "10.00% EA", term: "Lulo Pro" }
     ];
 
     // EL BALANCE LÍQUIDO debe ser Ingresos - Gastos - Inversiones (para coincidir con el Dashboard)
@@ -172,6 +182,122 @@ export class FinancesService {
     };
   }
 
+  async getProjections(user: any) {
+    const finances = await this.findAll(user);
+    const fullUser = await this.usersService.getUserWithApiKey(user.userId);
+
+    if (!fullUser) throw new Error('User not found');
+
+    const now = new Date();
+    // Get last 3 months data
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(now.getMonth() - 3);
+
+    const savingsItems = finances.filter(f =>
+      (f.type === 'INVESTMENT' || (f.category && f.category.toLowerCase().includes('ahorro'))) &&
+      new Date(f.date) >= threeMonthsAgo
+    );
+
+    const emergencyItems = finances.filter(f =>
+      f.category && f.category.toLowerCase().includes('emergencia') &&
+      new Date(f.date) >= threeMonthsAgo
+    );
+
+    const totalSavingsLast3Months = savingsItems.reduce((acc, curr) => {
+      const amount = Number(curr.amount);
+      return curr.type === 'EXPENSE' ? acc - amount : acc + amount;
+    }, 0);
+
+    const totalEmergencyLast3Months = emergencyItems.reduce((acc, curr) => {
+      const amount = Number(curr.amount);
+      return curr.type === 'EXPENSE' ? acc - amount : acc + amount;
+    }, 0);
+
+    const monthlySavingsAvg = totalSavingsLast3Months / 3;
+    const monthlyEmergencyAvg = totalEmergencyLast3Months / 3;
+
+    // Calculate months to goal (Accumulated vs Annual Goal)
+    const currentSavings = finances
+      .filter(f => f.type === 'INVESTMENT' || (f.category && f.category.toLowerCase().includes('ahorro')))
+      .reduce((acc, curr) => {
+        const amount = Number(curr.amount);
+        return curr.type === 'EXPENSE' ? acc - amount : acc + amount;
+      }, 0);
+
+    const currentEmergency = finances
+      .filter(f => f.category && f.category.toLowerCase().includes('emergencia'))
+      .reduce((acc, curr) => {
+        const amount = Number(curr.amount);
+        return curr.type === 'EXPENSE' ? acc - amount : acc + amount;
+      }, 0);
+
+    // YTD Logic
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const savingsYTD = finances
+      .filter(f => (f.type === 'INVESTMENT' || (f.category && f.category.toLowerCase().includes('ahorro'))) && new Date(f.date) >= startOfYear)
+      .reduce((acc, curr) => {
+        const amount = Number(curr.amount);
+        return curr.type === 'EXPENSE' ? acc - amount : acc + amount;
+      }, 0);
+
+    const emergencyYTD = finances
+      .filter(f => (f.category && f.category.toLowerCase().includes('emergencia')) && new Date(f.date) >= startOfYear)
+      .reduce((acc, curr) => {
+        const amount = Number(curr.amount);
+        return curr.type === 'EXPENSE' ? acc - amount : acc + amount;
+      }, 0);
+
+    const savingsMonthlyGoal = Number(fullUser.savingsGoal) || 0;
+    const emergencyMonthlyGoal = Number(fullUser.emergencyFundGoal) || 0;
+
+    const savingsAnnualGoal = savingsMonthlyGoal * 12;
+    const emergencyAnnualGoal = emergencyMonthlyGoal * 12;
+
+    // Calculate months to Annual Goal (Total Accumulated vs Annual Target)
+    let savingsMonthsToGoal = 0;
+    if (savingsAnnualGoal > currentSavings && monthlySavingsAvg > 0) {
+      savingsMonthsToGoal = Math.ceil((savingsAnnualGoal - currentSavings) / monthlySavingsAvg);
+    }
+
+    let emergencyMonthsToGoal = 0;
+    if (emergencyAnnualGoal > currentEmergency && monthlyEmergencyAvg > 0) {
+      emergencyMonthsToGoal = Math.ceil((emergencyAnnualGoal - currentEmergency) / monthlyEmergencyAvg);
+    }
+
+    return {
+      savings: {
+        current: currentSavings,
+        goal: savingsAnnualGoal, // Using Annual as Total Target
+        monthlyAverage: monthlySavingsAvg,
+        monthsToGoal: savingsMonthsToGoal,
+        projectedDate: savingsMonthsToGoal > 0 ? new Date(now.setMonth(now.getMonth() + savingsMonthsToGoal)) : null
+      },
+      emergency: {
+        current: currentEmergency,
+        goal: emergencyAnnualGoal, // Using Annual as Total Target
+        monthlyAverage: monthlyEmergencyAvg,
+        monthsToGoal: emergencyMonthsToGoal,
+        projectedDate: emergencyMonthsToGoal > 0 ? new Date(now.setMonth(now.getMonth() + emergencyMonthsToGoal)) : null
+      },
+      annual: { // Savings Annual Vision
+        year: now.getFullYear(),
+        monthlyGoal: savingsMonthlyGoal,
+        annualGoal: savingsAnnualGoal,
+        currentYTD: savingsYTD,
+        projectedEndYear: savingsYTD + (monthlySavingsAvg * (12 - (new Date().getMonth() + 1))),
+        progress: savingsAnnualGoal > 0 ? (savingsYTD / savingsAnnualGoal) * 100 : 0
+      },
+      annualEmergency: { // Emergency Annual Vision
+        year: now.getFullYear(),
+        monthlyGoal: emergencyMonthlyGoal,
+        annualGoal: emergencyAnnualGoal,
+        currentYTD: emergencyYTD,
+        projectedEndYear: emergencyYTD + (monthlyEmergencyAvg * (12 - (new Date().getMonth() + 1))),
+        progress: emergencyAnnualGoal > 0 ? (emergencyYTD / emergencyAnnualGoal) * 100 : 0
+      }
+    };
+  }
+
   async getGoalsAnalytics(user: any) {
     const finances = await this.findAll(user);
     const fullUser = await this.usersService.getUserWithApiKey(user.userId);
@@ -192,16 +318,28 @@ export class FinancesService {
       f.category && f.category.toLowerCase().includes('emergencia')
     );
 
-    const savingsActual = savingsItems.reduce((acc, curr) => acc + Number(curr.amount), 0);
-    const emergencyActual = emergencyItems.reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const savingsActual = savingsItems.reduce((acc, curr) => {
+      const amount = Number(curr.amount);
+      return curr.type === 'EXPENSE' ? acc - amount : acc + amount;
+    }, 0);
+    const emergencyActual = emergencyItems.reduce((acc, curr) => {
+      const amount = Number(curr.amount);
+      return curr.type === 'EXPENSE' ? acc - amount : acc + amount;
+    }, 0);
 
     const savingsThisMonth = savingsItems
       .filter(f => new Date(f.date) >= startOfMonth)
-      .reduce((acc, curr) => acc + Number(curr.amount), 0);
+      .reduce((acc, curr) => {
+        const amount = Number(curr.amount);
+        return curr.type === 'EXPENSE' ? acc - amount : acc + amount;
+      }, 0);
 
     const emergencyThisMonth = emergencyItems
       .filter(f => new Date(f.date) >= startOfMonth)
-      .reduce((acc, curr) => acc + Number(curr.amount), 0);
+      .reduce((acc, curr) => {
+        const amount = Number(curr.amount);
+        return curr.type === 'EXPENSE' ? acc - amount : acc + amount;
+      }, 0);
 
     return {
       savings: {

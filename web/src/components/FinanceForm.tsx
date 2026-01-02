@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useFinances, FinanceType } from "../hooks/useFinances";
 import { fetchAPI } from "../lib/api";
 import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle } from "lucide-react";
 
 export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: boolean, budgetExceeded: boolean) => void }) {
     const { addFinance } = useFinances();
@@ -21,16 +22,32 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
         const fetchCategories = async () => {
             try {
                 const budgets = await fetchAPI("/budgets");
-                const names = budgets.map((b: any) => b.category);
-                setCategories(names);
+                const budgetCategories = budgets.map((b: any) => b.category);
+
+                // Categorías críticas por defecto para el sistema de metas
+                const defaultCategories = ["Ahorro", "Fondo de Emergencia"];
+
+                // Unificar y remover duplicados (ignorando mayúsculas/minúsculas para el filtro, pero prefiriendo el formato Capitalizado)
+                const uniqueCategories = Array.from(new Set([...defaultCategories, ...budgetCategories]));
+
+                setCategories(uniqueCategories);
             } catch (error) {
                 console.error("Error fetching categories:", error);
+                setCategories(["Ahorro", "Fondo de Emergencia"]);
             }
         };
         fetchCategories();
     }, []);
 
+    // Auto-fix type when switching to strict categories
+    useEffect(() => {
+        if ((formData.category === 'Ahorro' || formData.category === 'Fondo de Emergencia') && formData.type === FinanceType.INVESTMENT) {
+            setFormData(prev => ({ ...prev, type: FinanceType.INCOME }));
+        }
+    }, [formData.category]);
+
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorModal, setErrorModal] = useState<{ show: boolean, message: string }>({ show: false, message: "" }); // Estado para modal de error
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,7 +55,7 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
 
         const amountNum = parseFloat(formData.amount);
         if (isNaN(amountNum) || amountNum <= 0) {
-            alert("Por favor ingrese un monto válido");
+            setErrorModal({ show: true, message: "Por favor ingrese un monto válido mayor a 0." });
             setIsSubmitting(false);
             return;
         }
@@ -55,22 +72,26 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
         if (formData.startDate) submissionData.startDate = new Date(formData.startDate);
         if (formData.endDate) submissionData.endDate = new Date(formData.endDate);
 
-        const response = await addFinance(submissionData);
+        try {
+            const response = await addFinance(submissionData);
 
-        if (response.success) {
-            setFormData({
-                amount: "",
-                description: "",
-                type: FinanceType.EXPENSE,
-                category: "General",
-                interestRate: "",
-                startDate: "",
-                endDate: "",
-                currency: "COP",
-            });
-            onSuccess(response.leveledUp, response.budgetExceeded);
-        } else {
-            alert("Error al guardar");
+            if (response.success) {
+                setFormData({
+                    amount: "",
+                    description: "",
+                    type: FinanceType.EXPENSE,
+                    category: "General",
+                    interestRate: "",
+                    startDate: "",
+                    endDate: "",
+                    currency: "COP",
+                });
+                onSuccess(response.leveledUp, response.budgetExceeded);
+            } else {
+                setErrorModal({ show: true, message: "Error al guardar el registro. Intente nuevamente." });
+            }
+        } catch (error) {
+            setErrorModal({ show: true, message: "Ocurrió un error inesperado al procesar la solicitud." });
         }
         setIsSubmitting(false);
     };
@@ -110,10 +131,25 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
                             outline: 'none'
                         }}
                     >
-                        <option value={FinanceType.EXPENSE}>Gasto</option>
-                        <option value={FinanceType.INCOME}>Ingreso</option>
-                        <option value={FinanceType.INVESTMENT}>Inversión</option>
+                        {/* Logic: Savings/Emergency restrict Investment type OR clarify meaning */}
+                        {(formData.category === 'Ahorro' || formData.category === 'Fondo de Emergencia') ? (
+                            <>
+                                <option value={FinanceType.INCOME}>Ingreso (Aportar)</option>
+                                <option value={FinanceType.EXPENSE}>Gasto (Retirar)</option>
+                            </>
+                        ) : (
+                            <>
+                                <option value={FinanceType.EXPENSE}>Gasto</option>
+                                <option value={FinanceType.INCOME}>Ingreso</option>
+                                <option value={FinanceType.INVESTMENT}>Inversión</option>
+                            </>
+                        )}
                     </select>
+                    {(formData.category === 'Ahorro' || formData.category === 'Fondo de Emergencia') && (
+                        <p style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: '0.25rem' }}>
+                            * Selecciona <b>Ingreso</b> para sumar a tu meta o <b>Gasto</b> para restar.
+                        </p>
+                    )}
                 </div>
 
                 <div style={{ flex: '2 1 300px', display: 'flex', gap: '0.5rem' }}>
@@ -296,6 +332,81 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
             >
                 {isSubmitting ? 'Procesando...' : 'Guardar Registro'}
             </button>
+            {/* Modal de Error Estilizado */}
+            <AnimatePresence>
+                {errorModal.show && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0,0,0,0.7)',
+                            backdropFilter: 'blur(5px)',
+                            zIndex: 2000,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        onClick={() => setErrorModal({ ...errorModal, show: false })}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            style={{
+                                background: '#18181b',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '20px',
+                                padding: '2rem',
+                                maxWidth: '400px',
+                                width: '90%',
+                                textAlign: 'center',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div style={{
+                                width: '60px',
+                                height: '60px',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 1.5rem'
+                            }}>
+                                <AlertCircle size={32} color="#ef4444" />
+                            </div>
+
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>Error</h3>
+                            <p style={{ color: '#a1a1aa', marginBottom: '2rem', lineHeight: 1.6 }}>
+                                {errorModal.message}
+                            </p>
+
+                            <button
+                                onClick={() => setErrorModal({ ...errorModal, show: false })}
+                                style={{
+                                    padding: '0.75rem 2rem',
+                                    background: '#ef4444',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                    width: '100%'
+                                }}
+                            >
+                                Entendido
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </form>
     );
 }

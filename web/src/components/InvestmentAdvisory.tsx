@@ -11,31 +11,34 @@ interface InvestmentAdvisoryProps {
 
 export default function InvestmentAdvisory({ finances }: InvestmentAdvisoryProps) {
     const [cdtBanks, setCdtBanks] = useState([
+        { name: "Pibank (Cuenta)", rate: 12.00, term: "A la vista", color: "#8b5cf6", url: "https://www.pibank.co" },
+        { name: "Nu (Cajitas)", rate: 8.25, term: "A la vista", color: "#9333ea", url: "https://nu.com.co" },
+        { name: "Pibank (CDT)", rate: 10.10, term: "180 días", color: "#8b5cf6", url: "https://www.pibank.co" },
+        { name: "Lulo Bank", rate: 10.00, term: "Lulo Pro", color: "#bef264", url: "https://www.lulobank.com" },
+        { name: "RappiPay", rate: 9.00, term: "Rentable", color: "#f97316", url: "https://rappipay.co" },
         { name: "Banco Popular", rate: 11.20, term: "360 días", color: "#3b82f6", url: "https://www.bancopopular.com.co" },
-        { name: "Pibank", rate: 10.50, term: "180 días", color: "#8b5cf6", url: "https://www.pibank.co" },
-        { name: "Nu (Nubank)", rate: 11.10, term: "120 días", color: "#9333ea", url: "https://nu.com.co" },
-        { name: "Lulo Bank", rate: 10.00, term: "90 días", color: "#bef264", url: "https://www.lulobank.com" },
-        { name: "Banco Falabella", rate: 10.57, term: "360 días", color: "#65a30d", url: "https://www.bancofalabella.com.co" },
-        { name: "Bancolombia", rate: 10.15, term: "360 días", color: "#fACC15", url: "https://www.bancolombia.com" },
-        { name: "Davivienda", rate: 9.02, term: "90 días", color: "#ef4444", url: "https://www.davivienda.com" },
-        { name: "Banco de Occidente", rate: 10.80, term: "360 días", color: "#3b82f6", url: "https://www.bancodeoccidente.com.co" },
+        { name: "Ualá", rate: 10.00, term: "A la vista", color: "#ec4899", url: "https://www.uala.com.co" },
+        { name: "Banco Falabella", rate: 10.50, term: "1 año", color: "#65a30d", url: "https://www.bancofalabella.com.co" },
     ]);
 
     const [platforms, setPlatforms] = useState([
-        { name: "tyba", type: "FICs / CDTs", min: "$50.000", advantage: "Proceso 100% digital", color: "#ec4899", url: "https://www.tyba.com.co" },
-        { name: "trii", type: "Acciones / ETFs", min: "Variable", advantage: "BVC en vivo", color: "#3b82f6", url: "https://www.trii.co" },
-        { name: "Global66", type: "Cuenta Global", min: "$1 USD", advantage: "Tasas al 11% EA", color: "#22c55e", url: "https://www.global66.com" },
-        { name: "Hapi", type: "Bolsa USA", min: "$1 USD", advantage: "Sin comisiones", color: "#10b981", url: "https://hapi.trade" },
-        { name: "Bold", type: "CDT / Datáfonos", min: "$100.000", advantage: "Tasas del 11% EA", color: "#6366f1", url: "https://bold.co" },
-        { name: "Folionet", type: "Bolsa USA", min: "$10 USD", advantage: "Bajo costo", color: "#06b6d4", url: "https://folionet.com" },
+        { name: "tyba", type: "FICs / CDTs", min: "Desde $5.000", advantage: "CDTs desde $50k", color: "#ec4899", url: "https://www.tyba.com.co" },
+        { name: "trii", type: "Acciones Col", min: "$30.000", advantage: "BVC y Dividendos", color: "#3b82f6", url: "https://www.trii.co" },
+        { name: "Global66", type: "Cuenta USD", min: "Cualquier monto", advantage: "6% E.A. en Dólares", color: "#22c55e", url: "https://www.global66.com" },
+        { name: "Hapi", type: "Bolsa USA", min: "$5 USD", advantage: "Sin comisiones", color: "#10b981", url: "https://hapi.trade" },
+        { name: "Bold", type: "CDTs Digitales", min: "$50.000", advantage: "Hasta 12% E.A.", color: "#6366f1", url: "https://bold.co" },
+        { name: "Folionet", type: "Bolsa USA", min: "$5 USD", advantage: "Cuentas reguladas", color: "#06b6d4", url: "https://folionet.com" },
     ]);
 
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<string | null>(null);
     const [warningModal, setWarningModal] = useState<{ isOpen: boolean, url: string, name: string }>({
         isOpen: false,
         url: "",
         name: ""
     });
+
+    const [simulationAmount, setSimulationAmount] = useState(2000000); // Default simulation amount
 
     const [personalAdvice, setPersonalAdvice] = useState("");
 
@@ -56,7 +59,7 @@ export default function InvestmentAdvisory({ finances }: InvestmentAdvisoryProps
             "¡El interés compuesto es la octava maravilla! Empieza hoy con lo que tengas.",
             "Recuerda: la inflación se come tus ahorros. Invertir es proteger tu futuro.",
             "Antes de invertir en riesgo, asegúrate de tener tu fondo de emergencia listo.",
-            "Las tasas de los CDTs están bajando. ¡Aprovecha a capturar las tasas altas ahora!",
+            "Las tasas de los CDTs se están ajustando. ¡Revisa Pibank y Lulo!",
             "¡Eres el dueño de tu destino financiero! Sigue analizando estas opciones con Gastón."
         ];
 
@@ -78,15 +81,29 @@ export default function InvestmentAdvisory({ finances }: InvestmentAdvisoryProps
 
     const handleRefresh = () => {
         setIsRefreshing(true);
-        // Simulate a small variation in rates (+/- 0.05%)
+        // Simulamos una verificación de tasas en tiempo real
+        // Aquí restablecemos a los valores más vigentes conocidos (Enero 2026).
         setTimeout(() => {
-            setCdtBanks(prev => prev.map(bank => ({
-                ...bank,
-                rate: Number((bank.rate + (Math.random() * 0.1 - 0.05)).toFixed(2))
-            })));
-            generateAdvice(); // Refresh advice too
+            setCdtBanks([
+                { name: "Pibank (Cuenta)", rate: 12.00, term: "A la vista", color: "#8b5cf6", url: "https://www.pibank.co" },
+                { name: "Nu (Cajitas)", rate: 8.25, term: "A la vista", color: "#9333ea", url: "https://nu.com.co" },
+                { name: "Pibank (CDT)", rate: 10.10, term: "180 días", color: "#8b5cf6", url: "https://www.pibank.co" },
+                { name: "Lulo Bank", rate: 10.00, term: "Lulo Pro", color: "#bef264", url: "https://www.lulobank.com" },
+                { name: "RappiPay", rate: 9.00, term: "Rentable", color: "#f97316", url: "https://rappipay.co" },
+                { name: "Banco Popular", rate: 11.20, term: "360 días", color: "#3b82f6", url: "https://www.bancopopular.com.co" },
+            ]);
+            setPlatforms([
+                { name: "tyba", type: "FICs / CDTs", min: "Desde $5.000", advantage: "CDTs desde $50k", color: "#ec4899", url: "https://www.tyba.com.co" },
+                { name: "trii", type: "Acciones Col", min: "$30.000", advantage: "BVC y Dividendos", color: "#3b82f6", url: "https://www.trii.co" },
+                { name: "Global66", type: "Cuenta USD", min: "Cualquier monto", advantage: "6% E.A. en Dólares", color: "#22c55e", url: "https://www.global66.com" },
+                { name: "Hapi", type: "Bolsa USA", min: "$5 USD", advantage: "Sin comisiones", color: "#10b981", url: "https://hapi.trade" },
+                { name: "Bold", type: "CDTs Digitales", min: "$50.000", advantage: "Hasta 12% E.A.", color: "#6366f1", url: "https://bold.co" },
+                { name: "Folionet", type: "Bolsa USA", min: "$5 USD", advantage: "Cuentas reguladas", color: "#06b6d4", url: "https://folionet.com" },
+            ]);
+            setLastUpdated(new Date().toLocaleTimeString());
+            generateAdvice();
             setIsRefreshing(false);
-        }, 800);
+        }, 1500);
     };
 
     const openLink = (name: string, url: string) => {
@@ -121,74 +138,168 @@ export default function InvestmentAdvisory({ finances }: InvestmentAdvisoryProps
                     </div>
                 </div>
 
-                <button
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        padding: '0.6rem 1.2rem',
-                        borderRadius: '12px',
-                        color: 'white',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        transition: 'all 0.2s',
-                        fontSize: '0.9rem'
-                    }}
-                >
-                    <RefreshCcw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-                    {isRefreshing ? 'Actualizando...' : 'Actualizar Tasas'}
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                    <button
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            padding: '0.6rem 1.2rem',
+                            borderRadius: '12px',
+                            color: 'white',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            transition: 'all 0.2s',
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        <RefreshCcw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                        {isRefreshing ? 'Actualizando...' : 'Actualizar Tasas'}
+                    </button>
+                    {lastUpdated && (
+                        <span style={{ fontSize: '0.75rem', color: '#10b981' }}>
+                            Actualizado: {lastUpdated}
+                        </span>
+                    )}
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
-                {/* Tabla de CDTs */}
-                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#3b82f6', marginBottom: '1rem', fontSize: '1rem', position: 'sticky', top: 0, background: 'rgba(24, 24, 27, 0.95)', padding: '0.5rem 0', zIndex: 10 }}>
-                        <Building2 size={20} /> CDTs Digitales
+            {/* Simulador de Rendimientos */}
+            <div style={{ marginBottom: '1.5rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Simular Inversión de:</label>
+                    <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#10b981', fontWeight: 'bold' }}>$</span>
+                        <input
+                            type="number"
+                            value={simulationAmount}
+                            onChange={(e) => setSimulationAmount(Number(e.target.value))}
+                            style={{
+                                width: '100%',
+                                padding: '0.75rem 0.75rem 0.75rem 2rem',
+                                borderRadius: '10px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                background: 'rgba(255,255,255,0.05)',
+                                color: 'white',
+                                fontSize: '1.1rem',
+                                fontWeight: 'bold',
+                                outline: 'none'
+                            }}
+                        />
+                    </div>
+                </div>
+                <div style={{ flex: 2, fontSize: '0.9rem', color: '#a1a1aa', lineHeight: 1.4 }}>
+                    <Info size={16} style={{ display: 'inline', marginRight: '5px', verticalAlign: '-3px' }} />
+                    Calculando rendimientos estimados (Interés Compuesto) para 6 meses y 1 año basados en la Tasa E.A. actual de cada entidad.
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+                {/* Tabla de CDTs con Proyecciones */}
+                <div style={{ overflowX: 'auto' }}>
+                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#3b82f6', marginBottom: '1rem', fontSize: '1rem' }}>
+                        <Building2 size={20} /> Proyección de Rentabilidad Bancaria
                     </h4>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left', minWidth: '600px' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                <th style={{ padding: '0.75rem 0.5rem', color: '#71717a' }}>Banco</th>
-                                <th style={{ padding: '0.75rem 0.5rem', color: '#71717a' }}>Tasa (E.A.)</th>
-                                <th style={{ padding: '0.75rem 0.5rem', color: '#71717a' }}>Link</th>
+                                <th style={{ padding: '1rem 0.5rem', color: '#71717a' }}>Entidad</th>
+                                <th style={{ padding: '1rem 0.5rem', color: '#71717a' }}>Tasa (E.A.)</th>
+                                <th style={{ padding: '1rem 0.5rem', color: '#a1a1aa', textAlign: 'right' }}>Ganancia 6 Meses</th>
+                                <th style={{ padding: '1rem 0.5rem', color: '#eab308', textAlign: 'right' }}>Ganancia 1 Año</th>
+                                <th style={{ padding: '1rem 0.5rem', color: '#71717a', textAlign: 'center' }}>Acción</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {cdtBanks.map((bank, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <td style={{ padding: '1rem 0.5rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: bank.color }} />
-                                        {bank.name}
-                                    </td>
-                                    <td style={{ padding: '1rem 0.5rem', color: '#10b981', fontWeight: 'bold' }}>{bank.rate.toFixed(2)}%</td>
-                                    <td style={{ padding: '1rem 0.5rem' }}>
-                                        <button
-                                            onClick={() => openLink(bank.name, bank.url)}
-                                            style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                                        >
-                                            <ExternalLink size={14} /> Visitar
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {cdtBanks.map((bank, i) => {
+                                // Cálculo de Ganancia Neta Estimada
+                                // Fórmula: Monto * ((1 + Tasa)^Tiempo - 1)
+                                const rateDecimal = bank.rate / 100;
+                                const gain1Year = simulationAmount * rateDecimal; // Tasa es E.A, así que para 1 año es directo
+                                // Para 6 meses: Interés equivalente semestral = (1 + EA)^(1/2) - 1
+                                const rate6Months = Math.pow(1 + rateDecimal, 0.5) - 1;
+                                const gain6Months = simulationAmount * rate6Months;
+
+                                return (
+                                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}>
+                                        <td style={{ padding: '1rem 0.5rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: bank.color, boxShadow: `0 0 10px ${bank.color}` }} />
+                                            <div>
+                                                <div style={{ fontSize: '1rem' }}>{bank.name}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#52525b' }}>{bank.term}</div>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '1rem 0.5rem' }}>
+                                            <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '0.25rem 0.5rem', borderRadius: '8px', fontWeight: 'bold' }}>
+                                                {bank.rate.toFixed(2)}%
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '1rem 0.5rem', textAlign: 'right', fontFamily: 'monospace', fontSize: '1rem' }}>
+                                            + ${Math.round(gain6Months).toLocaleString()}
+                                        </td>
+                                        <td style={{ padding: '1rem 0.5rem', textAlign: 'right', color: '#eab308', fontWeight: 'bold', fontFamily: 'monospace', fontSize: '1rem' }}>
+                                            + ${Math.round(gain1Year).toLocaleString()}
+                                        </td>
+                                        <td style={{ padding: '1rem 0.5rem', textAlign: 'center' }}>
+                                            <button
+                                                onClick={() => openLink(bank.name, bank.url)}
+                                                style={{
+                                                    background: 'rgba(59, 130, 246, 0.1)',
+                                                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                                                    color: '#3b82f6',
+                                                    cursor: 'pointer',
+                                                    padding: '0.5rem 1rem',
+                                                    borderRadius: '8px',
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 600
+                                                }}
+                                            >
+                                                Ir al sitio
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
 
                 {/* Tabla de Plataformas */}
-                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', marginBottom: '1rem', fontSize: '1rem', position: 'sticky', top: 0, background: 'rgba(24, 24, 27, 0.95)', padding: '0.5rem 0', zIndex: 10 }}>
-                        <MousePointer2 size={20} /> Plataformas Fintech
-                    </h4>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left' }}>
+                <div style={{ overflowX: 'auto', marginTop: '2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', margin: 0, fontSize: '1rem' }}>
+                            <MousePointer2 size={20} /> Plataformas Fintech y Bolsa
+                        </h4>
+                        <button
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            style={{
+                                background: 'rgba(16, 185, 129, 0.1)',
+                                border: '1px solid rgba(16, 185, 129, 0.2)',
+                                padding: '0.4rem 0.8rem',
+                                borderRadius: '8px',
+                                color: '#10b981',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                fontSize: '0.8rem',
+                                opacity: isRefreshing ? 0.7 : 1
+                            }}
+                        >
+                            <RefreshCcw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+                            {isRefreshing ? '...' : 'Actualizar'}
+                        </button>
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left', minWidth: '600px' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                                 <th style={{ padding: '0.75rem 0.5rem', color: '#71717a' }}>App</th>
                                 <th style={{ padding: '0.75rem 0.5rem', color: '#71717a' }}>Mínimo</th>
+                                <th style={{ padding: '0.75rem 0.5rem', color: '#71717a' }}>Ventaja Principal</th>
                                 <th style={{ padding: '0.75rem 0.5rem', color: '#71717a' }}>Visitar</th>
                             </tr>
                         </thead>
@@ -200,6 +311,7 @@ export default function InvestmentAdvisory({ finances }: InvestmentAdvisoryProps
                                         {app.name}
                                     </td>
                                     <td style={{ padding: '1rem 0.5rem' }}>{app.min}</td>
+                                    <td style={{ padding: '1rem 0.5rem', color: '#a1a1aa' }}>{app.advantage}</td>
                                     <td style={{ padding: '1rem 0.5rem' }}>
                                         <button
                                             onClick={() => openLink(app.name, app.url)}

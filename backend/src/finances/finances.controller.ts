@@ -45,6 +45,11 @@ export class FinancesController {
     return this.financesService.getGoalsAnalytics(req.user);
   }
 
+  @Get('analytics/projections')
+  getProjections(@Request() req) {
+    return this.financesService.getProjections(req.user);
+  }
+
   @Post('ai/ask')
   async askAI(@Body() body: { question: string }, @Request() req) {
     try {
