@@ -13,6 +13,9 @@ import TermsModal from "./TermsModal";
 import AchievementUI from "./AchievementUI";
 import BudgetManager from "./BudgetManager";
 import BudgetAnalytics from "./BudgetAnalytics";
+import AIChatAdvisor from "./AIChatAdvisor";
+import BudgetComparisonChart from "./BudgetComparisonChart";
+import FinancialGoalsChart from "./FinancialGoalsChart";
 import { ChevronDown, History, X, PartyPopper, AlertTriangle, FileText, Download } from "lucide-react";
 import { useState } from "react";
 
@@ -70,17 +73,8 @@ export default function Dashboard({ triggerRefresh }: { triggerRefresh: boolean 
         }
     }, [triggerRefresh, refresh]);
 
-    // Persistent console disclaimers as requested
     useEffect(() => {
-        const logDisclaimer = () => {
-            console.log("%c MONEDIX SECURITY ", "background: #f87171; color: white; font-weight: bold; padding: 4px; border-radius: 4px;");
-            console.log("%c[DATA]%c Los consejos están basados exclusivamente en la información ingresada por el usuario. Datos erróneos resultarán en consejos erróneos.", "color: #ef4444; font-weight: bold;", "color: inherit;");
-            console.log("%c[LEGAL]%c Los datos del asesor deben ser verificados por el usuario con las entidades financieras. Los desarrolladores no asumen responsabilidad.", "color: #ef4444; font-weight: bold;", "color: inherit;");
-        };
-        logDisclaimer();
-        // Log every 5 minutes to keep it "always" in view if they clear console
-        const interval = setInterval(logDisclaimer, 300000);
-        return () => clearInterval(interval);
+        // Disclaimer logs are no longer needed in production-style view
     }, []);
 
     if (loading) return <div style={{ textAlign: 'center', padding: '2rem' }}>Cargando finanzas...</div>;
@@ -358,8 +352,17 @@ export default function Dashboard({ triggerRefresh }: { triggerRefresh: boolean 
             {/* Analítica de Presupuestos y Tendencias */}
             <BudgetAnalytics />
 
+            {/* Comparativa de Presupuesto vs Real */}
+            <BudgetComparisonChart />
+
+            {/* Metas Financieras (Ahorro y Fondo de Emergencia) */}
+            <FinancialGoalsChart />
+
             {/* Análisis del Científico de Datos */}
             <ExpertInsights finances={finances} />
+
+            {/* Chat con IA */}
+            <AIChatAdvisor finances={finances} />
 
             {/* Recomendaciones Expertas */}
             <InvestmentAdvisory finances={finances} />

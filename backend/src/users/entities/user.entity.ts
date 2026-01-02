@@ -44,4 +44,16 @@ export class User {
 
     @Column({ type: 'text', nullable: true, default: '[]' })
     medals: string; // JSON string array of medal IDs
+
+    @Column({ nullable: true, select: false })
+    hfToken: string;
+
+    @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
+    emergencyFundGoal: number;
+
+    @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
+    savingsGoal: number;
+
+    @Column({ default: 'monthly' })
+    savingsFrequency: string; // 'monthly', 'quincenal'
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useFinances, FinanceType } from "../hooks/useFinances";
 import { fetchAPI } from "../lib/api";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: boolean, budgetExceeded: boolean) => void }) {
     const { addFinance } = useFinances();
@@ -36,7 +36,6 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
         e.preventDefault();
         setIsSubmitting(true);
 
-        // Validar monto
         const amountNum = parseFloat(formData.amount);
         if (isNaN(amountNum) || amountNum <= 0) {
             alert("Por favor ingrese un monto válido");
@@ -44,11 +43,19 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
             return;
         }
 
-        const response = await addFinance({
-            ...formData,
+        const submissionData: any = {
             amount: amountNum,
-            interestRate: formData.interestRate ? parseFloat(formData.interestRate as string) : undefined,
-        });
+            description: formData.description,
+            type: formData.type,
+            category: formData.category,
+            currency: formData.currency,
+        };
+
+        if (formData.interestRate) submissionData.interestRate = parseFloat(formData.interestRate as string);
+        if (formData.startDate) submissionData.startDate = new Date(formData.startDate);
+        if (formData.endDate) submissionData.endDate = new Date(formData.endDate);
+
+        const response = await addFinance(submissionData);
 
         if (response.success) {
             setFormData({
@@ -72,17 +79,23 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
         <form onSubmit={handleSubmit} style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '1rem',
+            gap: '1.25rem',
             background: 'var(--card-bg)',
-            padding: '1.5rem',
-            borderRadius: '16px',
+            padding: '2rem',
+            borderRadius: '20px',
             border: '1px solid var(--card-border)',
-            backdropFilter: 'var(--glass-effect)'
+            backdropFilter: 'var(--glass-effect)',
+            maxWidth: '1000px',
+            margin: '0 auto',
+            width: '100%'
         }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Nuevo Registro</h3>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--primary)' }}>
+                Nuevo Registro
+            </h3>
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ flex: 1 }}>
+            {/* Row 1: Tipo, Monto y Divisa */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ flex: '1 1 200px' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Tipo</label>
                     <select
                         value={formData.type}
@@ -90,10 +103,11 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
                         style={{
                             width: '100%',
                             padding: '0.75rem',
-                            borderRadius: '8px',
+                            borderRadius: '10px',
                             border: '1px solid var(--card-border)',
-                            background: 'rgba(0,0,0,0.3)',
-                            color: 'var(--foreground)'
+                            background: 'rgba(0,0,0,0.4)',
+                            color: 'var(--foreground)',
+                            outline: 'none'
                         }}
                     >
                         <option value={FinanceType.EXPENSE}>Gasto</option>
@@ -102,25 +116,38 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
                     </select>
                 </div>
 
-                <div style={{ flex: 1, display: 'flex', gap: '0.5rem' }}>
+                <div style={{ flex: '2 1 300px', display: 'flex', gap: '0.5rem' }}>
                     <div style={{ flex: 1 }}>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Monto</label>
                         <input
-                            type="number"
+                            type="text"
+                            inputMode="decimal"
                             value={formData.amount}
-                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(',', '.');
+                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                    setFormData({ ...formData, amount: val });
+                                }
+                            }}
                             placeholder="0.00"
+                            autoComplete="off"
                             style={{
                                 width: '100%',
                                 padding: '0.75rem',
-                                borderRadius: '8px',
+                                borderRadius: '10px',
                                 border: '1px solid var(--card-border)',
-                                background: 'rgba(0,0,0,0.3)',
-                                color: 'var(--foreground)'
+                                background: 'rgba(0,0,0,0.4)',
+                                color: 'var(--foreground)',
+                                outline: 'none',
+                                transition: 'all 0.2s',
+                                fontSize: '1.1rem',
+                                fontWeight: '500'
                             }}
+                            onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                            onBlur={(e) => e.target.style.borderColor = 'var(--card-border)'}
                         />
                     </div>
-                    <div style={{ width: '80px' }}>
+                    <div style={{ width: '90px' }}>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Divisa</label>
                         <select
                             value={formData.currency}
@@ -128,10 +155,11 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
                             style={{
                                 width: '100%',
                                 padding: '0.75rem',
-                                borderRadius: '8px',
+                                borderRadius: '10px',
                                 border: '1px solid var(--card-border)',
-                                background: 'rgba(0,0,0,0.3)',
-                                color: 'var(--foreground)'
+                                background: 'rgba(0,0,0,0.4)',
+                                color: 'var(--foreground)',
+                                outline: 'none'
                             }}
                         >
                             <option value="COP">COP</option>
@@ -142,69 +170,78 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
                 </div>
             </div>
 
+            {/* Inversion Section (Conditional) */}
+            <AnimatePresence>
+                {formData.type === FinanceType.INVESTMENT && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', padding: '1.25rem', background: 'rgba(212, 175, 55, 0.05)', borderRadius: '12px', border: '1px dashed rgba(212, 175, 55, 0.3)' }}
+                    >
+                        <div style={{ gridColumn: '1 / -1' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Tasa Efectiva Anual (%)</label>
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                value={formData.interestRate}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(',', '.');
+                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                        setFormData({ ...formData, interestRate: val });
+                                    }
+                                }}
+                                placeholder="Ej: 11.0"
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--card-border)',
+                                    background: 'rgba(0,0,0,0.3)',
+                                    color: 'var(--foreground)',
+                                    outline: 'none'
+                                }}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Fecha Inicio</label>
+                            <input
+                                type="date"
+                                value={formData.startDate}
+                                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--card-border)',
+                                    background: 'rgba(0,0,0,0.3)',
+                                    colorScheme: 'dark'
+                                }}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Vencimiento</label>
+                            <input
+                                type="date"
+                                value={formData.endDate}
+                                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--card-border)',
+                                    background: 'rgba(0,0,0,0.3)',
+                                    colorScheme: 'dark'
+                                }}
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-            {formData.type === FinanceType.INVESTMENT && (
-                <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderTop: '1px solid var(--card-border)', paddingTop: '1rem' }}
-                >
-                    <div style={{ gridColumn: 'span 2' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Tasa Efectiva Anual (%)</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={formData.interestRate}
-                            onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
-                            placeholder="Ej: 11.0"
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                borderRadius: '8px',
-                                border: '1px solid var(--card-border)',
-                                background: 'rgba(0,0,0,0.3)',
-                                color: 'var(--foreground)'
-                            }}
-                        />
-                    </div>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Fecha Inicio</label>
-                        <input
-                            type="date"
-                            value={formData.startDate}
-                            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                borderRadius: '8px',
-                                border: '1px solid var(--card-border)',
-                                background: 'rgba(0,0,0,0.3)',
-                                color: 'var(--foreground)'
-                            }}
-                        />
-                    </div>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Fecha Vencimiento</label>
-                        <input
-                            type="date"
-                            value={formData.endDate}
-                            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                borderRadius: '8px',
-                                border: '1px solid var(--card-border)',
-                                background: 'rgba(0,0,0,0.3)',
-                                color: 'var(--foreground)'
-                            }}
-                        />
-                    </div>
-                </motion.div>
-            )
-            }
-
-            <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ flex: 1 }}>
+            {/* Row 2: Categoría y Descripción */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Categoría</label>
                     <select
                         value={formData.category}
@@ -212,35 +249,34 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
                         style={{
                             width: '100%',
                             padding: '0.75rem',
-                            borderRadius: '8px',
+                            borderRadius: '10px',
                             border: '1px solid var(--card-border)',
-                            background: 'rgba(0,0,0,0.3)',
-                            color: 'var(--foreground)'
+                            background: 'rgba(0,0,0,0.4)',
+                            color: 'var(--foreground)',
+                            outline: 'none'
                         }}
                     >
                         <option value="General">General</option>
                         {categories.map(cat => (
                             <option key={cat} value={cat}>{cat}</option>
                         ))}
-                        {formData.type === FinanceType.INVESTMENT && !categories.includes('Inversión') && (
-                            <option value="Inversión">Inversión 📈</option>
-                        )}
                     </select>
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 2, minWidth: '250px' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#a1a1aa' }}>Descripción</label>
                     <input
                         type="text"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        placeholder="Ej: Netflix, Almuerzo..."
+                        placeholder="Ej: Netflix, Cena familiar..."
                         style={{
                             width: '100%',
                             padding: '0.75rem',
-                            borderRadius: '8px',
+                            borderRadius: '10px',
                             border: '1px solid var(--card-border)',
-                            background: 'rgba(0,0,0,0.3)',
-                            color: 'var(--foreground)'
+                            background: 'rgba(0,0,0,0.4)',
+                            color: 'var(--foreground)',
+                            outline: 'none'
                         }}
                     />
                 </div>
@@ -250,10 +286,16 @@ export default function FinanceForm({ onSuccess }: { onSuccess: (leveledUp: bool
                 type="submit"
                 disabled={isSubmitting}
                 className="btn-primary"
-                style={{ marginTop: '0.5rem', width: '100%' }}
+                style={{
+                    marginTop: '0.5rem',
+                    padding: '1rem',
+                    fontSize: '1.1rem',
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase'
+                }}
             >
-                {isSubmitting ? 'Guardando...' : 'Guardar'}
+                {isSubmitting ? 'Procesando...' : 'Guardar Registro'}
             </button>
-        </form >
+        </form>
     );
 }

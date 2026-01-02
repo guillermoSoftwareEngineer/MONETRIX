@@ -5,96 +5,102 @@ import * as handlebars from 'handlebars';
 
 @Injectable()
 export class MailService {
-    private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter;
 
-    constructor(private configService: ConfigService) {
-        this.transporter = nodemailer.createTransport({
-            host: this.configService.get<string>('MAIL_HOST') || 'smtp.mailtrap.io',
-            port: this.configService.get<number>('MAIL_PORT') || 2525,
-            auth: {
-                user: this.configService.get<string>('MAIL_USER') || 'placeholder',
-                pass: this.configService.get<string>('MAIL_PASS') || 'placeholder',
-            },
-        });
-    }
+  constructor(private configService: ConfigService) {
+    this.transporter = nodemailer.createTransport({
+      host: this.configService.get<string>('MAIL_HOST') || 'smtp.mailtrap.io',
+      port: this.configService.get<number>('MAIL_PORT') || 2525,
+      auth: {
+        user: this.configService.get<string>('MAIL_USER') || 'placeholder',
+        pass: this.configService.get<string>('MAIL_PASS') || 'placeholder',
+      },
+    });
+  }
 
-    private wrapInPremiumTemplate(content: string, title: string) {
-        return `
+  private wrapInPremiumTemplate(content: string, title: string) {
+    return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0c0cc00; color: #ffffff; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background: #18181b; border-radius: 20px; border: 1px solid #27272a; overflow: hidden; }
-          .header { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 30px; text-align: center; }
-          .content { padding: 40px; line-height: 1.6; color: #d4d4d8; }
-          .button { display: inline-block; padding: 12px 24px; background: #3b82f6; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: bold; margin-top: 20px; }
-          .footer { padding: 20px; text-align: center; font-size: 12px; color: #71717a; border-top: 1px solid #27272a; }
-          h1 { color: #ffffff; margin-top: 0; }
-          strong { color: #3b82f6; }
+          body { font-family: 'Outfit', sans-serif; background-color: #0a0a0c; color: #ffffff; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 20px auto; background: #1a1d26; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+          .header { padding: 40px 30px 20px; text-align: center; }
+          .content { padding: 0 40px 40px; text-align: center; line-height: 1.6; color: #ededed; }
+          .button { display: inline-block; padding: 14px 32px; background: #d4af37; color: #000000; text-decoration: none; border-radius: 12px; font-weight: 700; margin-top: 30px; transition: all 0.2s; }
+          .footer { padding: 30px; text-align: center; font-size: 12px; color: #a1a1aa; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); }
+          h1 { color: #ffffff; font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+          strong { color: #d4af37; }
+          .avatar { width: 120px; height: 120px; border-radius: 50%; border: 4px solid #d4af37; margin: 0 auto 20px; display: block; }
+          .brand-logo { color: #d4af37; font-size: 24px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; }
+          ul { list-style: none; padding: 0; margin: 20px 0; }
+          li { margin-bottom: 10px; position: relative; padding-left: 20px; text-align: left; display: inline-block; }
+          li::before { content: "✓"; color: #d4af37; position: absolute; left: 0; font-weight: bold; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1 style="margin:0; font-size: 24px;">🚀 MONEDIX</h1>
+            <div class="brand-logo">MONEDIX</div>
           </div>
           <div class="content">
             ${content}
           </div>
           <div class="footer">
-            &copy; 2025 Monedix - Tu Asesor Financiero Inteligente 👾<br>
-            Este mensaje es automático. No respondas a este correo.
+            &copy; 2026 Monedix — Gestión Financiera de Alto Nivel<br>
+            Este es un mensaje institucional.
           </div>
         </div>
       </body>
       </html>
     `;
-    }
+  }
 
-    async sendReminderEmail(to: string, name: string, type: 'monthly' | 'quincenal') {
-        const subject = `🚀 ¡Es momento de Monedix! Recordatorio ${type === 'monthly' ? 'Mensual' : 'Quincenal'}`;
-        const content = `
-      <h1>¡Hola, ${name}! 👋</h1>
-      <p>Hoy es el gran día. Es momento de entrar a <strong>Monedix</strong> y poner tus finanzas al día.</p>
-      <p>Recuerda que cada registro te otorga <strong>10 XP</strong> para subir de nivel y desbloquear nuevas medallas. ¡No dejes que Gastón se aburra!</p>
-      <div style="text-align: center;">
-        <a href="http://localhost:3001" class="button">Ir a mi Dashboard</a>
+  async sendReminderEmail(to: string, name: string, type: 'monthly' | 'quincenal') {
+    const subject = `Es momento de tu Revisión Financiera - Monedix`;
+    const content = `
+      <img src="https://monedix.com/gaston.png" alt="Gastón" class="avatar">
+      <h1>¡Hola, ${name}!</h1>
+      <p>Es el momento ideal para entrar a <strong>Monedix</strong> y realizar tu revisión ${type === 'monthly' ? 'mensual' : 'quincenal'}.</p>
+      <p>Recuerda que tu nivel de estabilidad financiera depende de tu disciplina en el registro de presupuestos.</p>
+      <a href="http://localhost:3001" class="button">REALIZAR REVISIÓN AHORA</a>
+      <div style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+        <ul>
+          <li>Organiza tu presupuesto mensual</li>
+          <li>Ajusta tus metas de ahorro</li>
+          <li>Analiza tus gastos con Gastón</li>
+        </ul>
       </div>
-      <p style="margin-top: 30px;"><strong>Beneficios de registrar hoy:</strong></p>
-      <ul>
-        <li>Control total de tu presupuesto mensual.</li>
-        <li>Consejos personalizados del Científico de Datos.</li>
-        <li>Evolución de tu rango y nivel.</li>
-      </ul>
     `;
 
-        await this.transporter.sendMail({
-            from: '"Monedix Advisor" <no-reply@monedix.com>',
-            to,
-            subject,
-            html: this.wrapInPremiumTemplate(content, subject),
-        });
-    }
+    await this.transporter.sendMail({
+      from: '"Monedix Advisor" <no-reply@monedix.com>',
+      to,
+      subject,
+      html: this.wrapInPremiumTemplate(content, subject),
+    });
+  }
 
-    async sendInvestmentAlert(to: string, name: string, description: string, date: string) {
-        const subject = `⚠️ ¡Alerta de Vencimiento: ${description}!`;
-        const content = `
-      <h1>¡Atención, ${name}! ⚠️</h1>
-      <p>Tu inversión <strong>${description}</strong> está a punto de vencer mañana, día ${date}.</p>
-      <p>Es el momento ideal para decidir si reinvertirás en los CDTs digitales con mejores tasas o si necesitas liquidez.</p>
-      <div style="text-align: center;">
-        <a href="http://localhost:3001" class="button">Ver Opciones de Inversión</a>
+  async sendInvestmentAlert(to: string, name: string, description: string, date: string) {
+    const subject = `Alerta de Vencimiento: ${description} - Monedix`;
+    const content = `
+      <img src="https://monedix.com/gaston.png" alt="Gastón" class="avatar">
+      <h1>¡Atención, ${name}!</h1>
+      <p>Tu inversión <strong>${description}</strong> está a punto de vencer el día ${date}.</p>
+      <p>Es el momento ideal para decidir si reinvertirás en opciones de alto rendimiento o si prefieres disponer de la liquidez.</p>
+      <a href="http://localhost:3001" class="button">GESTIONAR INVERSIÓN</a>
+      <div style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+        <p style="font-style: italic; color: #a1a1aa;">"La disciplina financiera consiste en no dejar el dinero ocioso." — Gastón</p>
       </div>
-      <p style="margin-top: 30px;"><em>"Una buena salud financiera depende de no dejar el dinero ocioso por mucho tiempo."</em> - Gastón 👾</p>
     `;
 
-        await this.transporter.sendMail({
-            from: '"Monedix Advisor" <no-reply@monedix.com>',
-            to,
-            subject,
-            html: this.wrapInPremiumTemplate(content, subject),
-        });
-    }
+    await this.transporter.sendMail({
+      from: '"Monedix Advisor" <no-reply@monedix.com>',
+      to,
+      subject,
+      html: this.wrapInPremiumTemplate(content, subject),
+    });
+  }
 }

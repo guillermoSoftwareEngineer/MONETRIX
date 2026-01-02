@@ -32,29 +32,60 @@ export class UsersService {
         return this.usersRepository.findOne({ where: { id } });
     }
 
+    async getUserWithApiKey(id: string): Promise<User | null> {
+        return this.usersRepository.findOne({
+            where: { id },
+            select: ['id', 'fullName', 'email', 'level', 'xp', 'hfToken', 'reminderFrequency', 'reminderDay', 'reminderTime', 'investmentsReminder', 'emergencyFundGoal', 'savingsGoal', 'savingsFrequency']
+        });
+    }
+
     async updateSettings(id: string, settings: Partial<User>): Promise<User> {
         await this.usersRepository.update(id, settings);
-        const updated = await this.findOne(id);
+        const updated = await this.getUserWithApiKey(id);
         if (!updated) throw new Error('User not found after update');
         return updated;
     }
 
-    async addXp(id: string, amount: number): Promise<{ user: User, leveledUp: boolean }> {
+    async updateXp(id: string, amount: number): Promise<{ user: User, leveledUp: boolean, levelDown: boolean }> {
         const user = await this.findOne(id);
         if (!user) throw new Error('User not found');
 
         let leveledUp = false;
+        let levelDown = false;
+
         user.xp += amount;
 
-        // Level Up Logic: Each level requires level * 100 XP
-        const xpNeeded = user.level * 100;
-        if (user.xp >= xpNeeded) {
-            user.level += 1;
-            user.xp -= xpNeeded;
-            leveledUp = true;
+        // XP Scaling: 1000 XP per level (Compatible with 1000 levels progression)
+        const XP_PER_LEVEL = 1000;
+
+        // Level Up logic
+        if (user.xp >= XP_PER_LEVEL) {
+            if (user.level < 1000) {
+                user.level += 1;
+                user.xp -= XP_PER_LEVEL;
+                leveledUp = true;
+            } else {
+                user.xp = XP_PER_LEVEL; // Cap at max
+            }
+        }
+
+        // Level Down logic
+        if (user.xp < 0) {
+            if (user.level > 1) {
+                user.level -= 1;
+                user.xp = XP_PER_LEVEL + user.xp; // Add the negative XP to the base of previous level
+                levelDown = true;
+            } else {
+                user.xp = 0; // Floor at level 1, 0 XP
+            }
         }
 
         const savedUser = await this.usersRepository.save(user);
-        return { user: savedUser, leveledUp };
+        return { user: savedUser, leveledUp, levelDown };
+    }
+
+    // Keep addXp as an alias or update callers
+    async addXp(id: string, amount: number) {
+        return this.updateXp(id, amount);
     }
 }

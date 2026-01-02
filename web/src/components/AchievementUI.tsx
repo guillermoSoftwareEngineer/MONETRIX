@@ -10,8 +10,7 @@ interface AchievementUIProps {
 }
 
 export default function AchievementUI({ level, xp, medals }: AchievementUIProps) {
-    const xpNeeded = level * 100;
-    const progress = (xp / xpNeeded) * 100;
+    const progress = (xp / 1000) * 100;
 
     return (
         <motion.div
@@ -46,12 +45,12 @@ export default function AchievementUI({ level, xp, medals }: AchievementUIProps)
                     </div>
                     <div>
                         <div style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: 'bold', textTransform: 'uppercase' }}>Rango</div>
-                        <div style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff' }}>Nivel {level}</div>
+                        <div style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff' }}>Nivel {level} / 1000</div>
                     </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>XP</div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#fACC15' }}>{xp} / {xpNeeded}</div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#fACC15' }}>{xp} / 1000</div>
                 </div>
             </div>
 

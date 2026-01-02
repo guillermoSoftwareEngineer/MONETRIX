@@ -22,5 +22,12 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
         throw new Error(errorBody.message || 'Error en la petición API');
     }
 
-    return res.json();
+    if (res.status === 204) return null;
+
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+        return res.json();
+    }
+
+    return null;
 }

@@ -13,11 +13,6 @@ export default function TermsModal() {
         if (!hasAccepted) {
             setIsOpen(true);
         }
-
-        // Log compliance messages to developer console as requested
-        console.log("%c MONEDIX LEGAL COMPLIANCE ", "background: #3b82f6; color: white; font-weight: bold; padding: 4px; border-radius: 4px;");
-        console.log("%c[ADVERTENCIA]%c Los consejos están basados exclusivamente en la información ingresada por el usuario. Datos erróneos resultarán en consejos erróneos.", "color: #ef4444; font-weight: bold;", "color: inherit;");
-        console.log("%c[RESPONSABILIDAD]%c Los datos deben ser verificados por el usuario con las entidades financieras. Los desarrolladores no asumen responsabilidad por decisiones financieras.", "color: #ef4444; font-weight: bold;", "color: inherit;");
     }, []);
 
     const handleAccept = () => {

@@ -60,6 +60,8 @@ export class FinancesService {
 
         if (totalSpent > Number(budget.limit)) {
           budgetExceeded = true;
+          // Penalty: Exceeding budget costs 20 XP
+          await this.usersService.updateXp(user.userId, -20);
         }
       }
     }
@@ -114,5 +116,105 @@ export class FinancesService {
     });
 
     return Object.values(history);
+  }
+
+  async getFinancialSummary(user: any) {
+    const finances = await this.findAll(user);
+    const budgets = await this.budgetsService.findAll(user.userId);
+
+    const totalIncome = finances.filter(f => f.type === 'INCOME').reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const totalExpenses = finances.filter(f => f.type === 'EXPENSE').reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const totalInvestments = finances.filter(f => f.type === 'INVESTMENT').reduce((acc, curr) => acc + Number(curr.amount), 0);
+
+    const categories: any = {};
+    finances.filter(f => f.type === 'EXPENSE').forEach(f => {
+      categories[f.category] = (categories[f.category] || 0) + Number(f.amount);
+    });
+
+    const budgetStatus = budgets.map(b => ({
+      category: b.category,
+      limit: b.limit,
+      spent: categories[b.category] || 0
+    }));
+
+    // Datos de Mercado (Simulados para que Gastón sepa qué recomendar)
+    const marketOpporturnities = [
+      { name: "Nu (Nubank)", rate: "11.10% EA", term: "120 días" },
+      { name: "Banco Popular", rate: "11.20% EA", term: "360 días" },
+      { name: "Pibank", rate: "10.50% EA", term: "180 días" },
+      { name: "Global66", rate: "11% EA", type: "Cuenta Global" }
+    ];
+
+    // EL BALANCE LÍQUIDO debe ser Ingresos - Gastos - Inversiones (para coincidir con el Dashboard)
+    const liquidBalance = totalIncome - totalExpenses - totalInvestments;
+
+    // EL PATRIMONIO NETO es Dinero Líquido + Inversiones (Lo que realmente posee el usuario)
+    const netWorth = liquidBalance + totalInvestments;
+
+    return {
+      balance: liquidBalance,
+      netWorth: netWorth,
+      totalIncome,
+      totalExpenses,
+      totalInvestments,
+      emergencyFundGoal: user.emergencyFundGoal || 0,
+      savingsGoal: user.savingsGoal || 0,
+      savingsFrequency: user.savingsFrequency || 'monthly',
+      expensesByCategory: categories,
+      budgetStatus,
+      marketOpporturnities,
+      movementCount: finances.length,
+      currentInvestments: finances.filter(f => f.type === 'INVESTMENT').map(f => ({
+        description: f.description,
+        amount: f.amount,
+        category: f.category
+      }))
+    };
+  }
+
+  async getGoalsAnalytics(user: any) {
+    const finances = await this.findAll(user);
+    const fullUser = await this.usersService.getUserWithApiKey(user.userId);
+
+    if (!fullUser) throw new Error('User not found');
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    // Filter finances by relevance to goals (Ahorro / Inversiones / Fondo Emergencia)
+    const savingsItems = finances.filter(f =>
+      f.type === 'INVESTMENT' ||
+      (f.category && f.category.toLowerCase().includes('ahorro'))
+    );
+
+    const emergencyItems = finances.filter(f =>
+      f.category && f.category.toLowerCase().includes('emergencia')
+    );
+
+    const savingsActual = savingsItems.reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const emergencyActual = emergencyItems.reduce((acc, curr) => acc + Number(curr.amount), 0);
+
+    const savingsThisMonth = savingsItems
+      .filter(f => new Date(f.date) >= startOfMonth)
+      .reduce((acc, curr) => acc + Number(curr.amount), 0);
+
+    const emergencyThisMonth = emergencyItems
+      .filter(f => new Date(f.date) >= startOfMonth)
+      .reduce((acc, curr) => acc + Number(curr.amount), 0);
+
+    return {
+      savings: {
+        goal: Number(fullUser.savingsGoal) || 0,
+        actual: savingsActual,
+        thisMonth: savingsThisMonth,
+        frequency: fullUser.savingsFrequency
+      },
+      emergencyFund: {
+        goal: Number(fullUser.emergencyFundGoal) || 0,
+        actual: emergencyActual,
+        thisMonth: emergencyThisMonth
+      }
+    };
   }
 }

@@ -15,6 +15,7 @@ export default function BudgetManager() {
     const [budgets, setBudgets] = useState<Budget[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -48,12 +49,15 @@ export default function BudgetManager() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm("¿Estás seguro de eliminar este concepto?")) return;
+        setIsLoading(true);
         try {
             await fetchAPI(`/budgets/${id}`, { method: "DELETE" });
             await fetchBudgets();
+            setDeleteConfirmId(null);
         } catch (error) {
             alert("Error al eliminar");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -156,23 +160,35 @@ export default function BudgetManager() {
                                         />
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <input
-                                                type="number"
+                                                type="text"
+                                                inputMode="decimal"
                                                 defaultValue={budget.limit}
-                                                placeholder="Límite $"
-                                                onBlur={(e) => handleSave(budget.category, parseFloat(e.target.value), budget.id)}
+                                                placeholder="0.00"
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(',', '.');
+                                                    if (val !== '' && !/^\d*\.?\d*$/.test(val)) {
+                                                        e.target.value = val.slice(0, -1);
+                                                    }
+                                                }}
+                                                onBlur={(e) => {
+                                                    const val = parseFloat(e.target.value.replace(',', '.'));
+                                                    handleSave(budget.category, isNaN(val) ? 0 : val, budget.id);
+                                                }}
                                                 style={{
-                                                    width: '100px',
+                                                    width: '110px',
                                                     padding: '0.5rem',
                                                     background: 'rgba(0,0,0,0.3)',
                                                     border: '1px solid var(--card-border)',
                                                     borderRadius: '8px',
-                                                    color: '#fff',
-                                                    textAlign: 'right'
+                                                    color: 'var(--foreground)',
+                                                    textAlign: 'right',
+                                                    outline: 'none'
                                                 }}
+                                                onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
                                             />
                                             {budget.id && (
                                                 <button
-                                                    onClick={() => handleDelete(budget.id!)}
+                                                    onClick={() => setDeleteConfirmId(budget.id!)}
                                                     style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.5rem' }}
                                                     title="Eliminar concepto"
                                                 >
@@ -223,6 +239,100 @@ export default function BudgetManager() {
                             >
                                 Finalizar Configuración
                             </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Confirm Deletion Premium Modal */}
+            <AnimatePresence>
+                {deleteConfirmId && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            background: 'rgba(0,0,0,0.85)',
+                            backdropFilter: 'blur(12px)',
+                            zIndex: 3000,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '1rem'
+                        }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            style={{
+                                background: '#1a1d26',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                borderRadius: '24px',
+                                width: '100%',
+                                maxWidth: '360px',
+                                padding: '2rem',
+                                textAlign: 'center',
+                                boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+                            }}
+                        >
+                            <div style={{
+                                width: '60px',
+                                height: '60px',
+                                borderRadius: '50%',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 1.5rem',
+                                color: '#ef4444'
+                            }}>
+                                <Trash2 size={30} />
+                            </div>
+
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.75rem', color: '#fff' }}>
+                                ¿Eliminar concepto?
+                            </h3>
+                            <p style={{ color: '#a1a1aa', fontSize: '0.9rem', marginBottom: '2rem', lineHeight: 1.5 }}>
+                                Esta acción no se puede deshacer. Los gastos asociados a esta categoría ya no estarán vinculados a este presupuesto.
+                            </p>
+
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button
+                                    onClick={() => setDeleteConfirmId(null)}
+                                    style={{
+                                        flex: 1,
+                                        padding: '0.875rem',
+                                        borderRadius: '12px',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        color: '#fff',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(deleteConfirmId)}
+                                    disabled={isLoading}
+                                    style={{
+                                        flex: 1,
+                                        padding: '0.875rem',
+                                        borderRadius: '12px',
+                                        background: '#ef4444',
+                                        border: 'none',
+                                        color: '#fff',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        opacity: isLoading ? 0.6 : 1
+                                    }}
+                                >
+                                    {isLoading ? 'Eliminando...' : 'Eliminar'}
+                                </button>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}

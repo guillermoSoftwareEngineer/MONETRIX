@@ -11,6 +11,10 @@ interface User {
     level: number;
     xp: number;
     medals: string; // JSON string
+    hfToken?: string;
+    emergencyFundGoal: number;
+    savingsGoal: number;
+    savingsFrequency: string;
 }
 
 interface AuthContextType {

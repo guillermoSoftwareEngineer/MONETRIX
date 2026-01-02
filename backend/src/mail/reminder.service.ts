@@ -18,7 +18,7 @@ export class ReminderService {
         private mailService: MailService,
     ) { }
 
-    @Cron(CronExpression.EVERY_HOUR)
+    @Cron(CronExpression.EVERY_MINUTE)
     async handleCron() {
         this.logger.debug('Checking for reminders...');
         const now = new Date();

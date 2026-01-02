@@ -21,4 +21,9 @@ export class BudgetsController {
     async deleteBudget(@Request() req, @Param('id') id: string) {
         return this.budgetsService.remove(id, req.user.userId);
     }
+
+    @Get('analytics/comparison')
+    getComparison(@Request() req) {
+        return this.budgetsService.getBudgetComparison(req.user.userId);
+    }
 }
